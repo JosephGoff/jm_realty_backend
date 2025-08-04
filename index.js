@@ -5,16 +5,13 @@ const cheerio = require("cheerio");
 const cron = require("node-cron");
 const dotenv = require("dotenv");
 const fs = require("fs");
-const path = require("path");
-const puppeteer = require("puppeteer-extra");
-const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const nodemailer = require("nodemailer");
+const axios = require("axios")
+const path = require("path")
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-
-puppeteer.use(StealthPlugin());
 
 const allowedOrigins = [
   "https://joeygoff13.wixstudio.com/jmrealty",
@@ -202,72 +199,53 @@ async function scrapeStreetEasyListings() {
     }
   }
 
+  const target =
+    "https://streeteasy.com/profile/957084-daniel-cornicello?tab_profile=active_listings";
+  const key = process.env.ZYTE_API_KEY;
   try {
-    // const browser = await puppeteer.launch({
-    //   headless: true,
-    //   executablePath: "/usr/bin/chromium",
-    //   args: [
-    //     `--proxy-server=${PROXY_HOST}:${PROXY_PORT}`,
-    //     "--no-sandbox",
-    //     "--disable-setuid-sandbox",
-    //   ],
-    // });
-    const browser = await puppeteer.launch({
-      headless: true,
-      executablePath: "/usr/bin/chromium",
-      args: [
-        `--proxy-server=${PROXY_HOST}:${PROXY_PORT}`,
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-gpu",
-        "--disable-dev-shm-usage",
-        "--disable-blink-features=AutomationControlled",
-        "--window-size=1920,1080",
-      ],
-    });
-    const page = await browser.newPage();
-    await page.authenticate({
-      username: PROXY_USER,
-      password: PROXY_PASS,
-    });
-    await page.setUserAgent(
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
-    );
-    await page.setViewport({ width: 1280, height: 800 });
-    await page.evaluateOnNewDocument(() => {
-      Object.defineProperty(navigator, "webdriver", { get: () => false });
-    });
-    await page.goto(
-      "https://streeteasy.com/profile/957084-daniel-cornicello?tab_profile=active_listings",
+    const resp = await axios.post(
+      "https://api.zyte.com/v1/extract",
       {
-        waitUntil: "domcontentloaded",
-        timeout: 60000,
+        url: target,
+        browserHtml: true,
+        actions: [
+          {
+            action: "waitForSelector",
+            selector: {
+              type: "css",
+              value: 'div[data-qa="active-rentals"]',
+              state: "visible",
+            },
+            timeout: 15,
+          },
+        ],
+      },
+      {
+        auth: { username: key, password: "" },
+        timeout: 90000,
       }
     );
-    await new Promise((resolve) => setTimeout(resolve, 10000));
-    await page.waitForSelector('div[data-qa="active-rentals"]', {
-      visible: true,
-      timeout: 60000,
-    });
-    const listingsHTML = await page.$eval(
-      'div[data-qa="active-rentals"]',
-      (el) => el.innerHTML
-    );
-    const listings = parseListings(listingsHTML);
+
+    const html = resp.data.browserHtml;
+    const listings = parseListings(html);
     console.log("LISTINGS: ", listings);
     if (Array.isArray(listings)) {
       saveData(listings, "listings.json");
     }
-    await browser.close();
-  } catch (error) {
-    await sendErrorEmail("StreetEasy", error);
-    console.error(error);
+  } catch (err) {
+    await sendErrorEmail("StreetEasy", err.message);
+    console.error(
+      "Fetch failed:",
+      err.response?.status,
+      err.response?.data,
+      err.message
+    );
   }
 }
-
+scrapeStreetEasyListings()
 
 cron.schedule(
-  "36 2 * * *",
+  "50 3 * * *",
   async () => {
     await scrapeZipRecruiter();
     await scrapeStreetEasyListings();
