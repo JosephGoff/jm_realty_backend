@@ -18,11 +18,6 @@ const allowedOrigins = [
   "https://jmrealtyservices.com",
 ];
 
-const PROXY_HOST = "geo.iproyal.com";
-const PROXY_PORT = "12321";
-const PROXY_USER = "ma64tHoi2FXZvTDg";
-const PROXY_PASS = "rdoIhYUaLcLkeHKD";
-
 app.use(helmet());
 app.use(
   cors({
