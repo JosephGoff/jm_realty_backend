@@ -248,7 +248,7 @@ async function scrapeStreetEasyListings() {
 }
 
 cron.schedule(
-  "35 1 * * *",
+  "55 1 * * *",
   async () => {
     await scrapeZipRecruiter();
     await scrapeStreetEasyListings();
