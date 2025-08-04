@@ -246,7 +246,6 @@ async function scrapeStreetEasyListings() {
     console.error(error);
   }
 }
-scrapeStreetEasyListings()
 
 cron.schedule(
   "30 1 * * *",
