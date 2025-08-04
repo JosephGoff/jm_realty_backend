@@ -203,12 +203,26 @@ async function scrapeStreetEasyListings() {
   }
 
   try {
+    // const browser = await puppeteer.launch({
+    //   headless: true,
+    //   executablePath: "/usr/bin/chromium",
+    //   args: [
+    //     `--proxy-server=${PROXY_HOST}:${PROXY_PORT}`,
+    //     "--no-sandbox",
+    //     "--disable-setuid-sandbox",
+    //   ],
+    // });
     const browser = await puppeteer.launch({
       headless: true,
+      executablePath: "/usr/bin/chromium",
       args: [
         `--proxy-server=${PROXY_HOST}:${PROXY_PORT}`,
         "--no-sandbox",
         "--disable-setuid-sandbox",
+        "--disable-gpu",
+        "--disable-dev-shm-usage",
+        "--disable-blink-features=AutomationControlled",
+        "--window-size=1920,1080",
       ],
     });
     const page = await browser.newPage();
@@ -219,6 +233,10 @@ async function scrapeStreetEasyListings() {
     await page.setUserAgent(
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
     );
+    await page.setViewport({ width: 1280, height: 800 });
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, "webdriver", { get: () => false });
+    });
     await page.goto(
       "https://streeteasy.com/profile/957084-daniel-cornicello?tab_profile=active_listings",
       {
@@ -247,8 +265,9 @@ async function scrapeStreetEasyListings() {
   }
 }
 
+
 cron.schedule(
-  "55 1 * * *",
+  "36 2 * * *",
   async () => {
     await scrapeZipRecruiter();
     await scrapeStreetEasyListings();
@@ -282,5 +301,5 @@ app.get("/listings", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
