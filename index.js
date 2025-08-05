@@ -6,8 +6,8 @@ const cron = require("node-cron");
 const dotenv = require("dotenv");
 const fs = require("fs");
 const nodemailer = require("nodemailer");
-const axios = require("axios")
-const path = require("path")
+const axios = require("axios");
+const path = require("path");
 dotenv.config();
 
 const app = express();
@@ -132,6 +132,11 @@ async function scrapeStreetEasyListings() {
         const wrapper = $(el);
 
         const imageUrl = wrapper.find("img").attr("src") || null;
+        const link = wrapper.find("h3 a").attr("href") || null;
+        const fullLink =
+          link && link.startsWith("http")
+            ? link
+            : `https://streeteasy.com${link}`;
 
         const price = wrapper
           .find(".styled__ListingPrice-sc-1bxj4tp-4")
@@ -179,6 +184,7 @@ async function scrapeStreetEasyListings() {
         listings.push({
           imageUrl,
           price,
+          link: fullLink, 
           address,
           beds,
           baths,
@@ -239,7 +245,7 @@ async function scrapeStreetEasyListings() {
 }
 
 cron.schedule(
-  "57 3 * * *",
+  "19 13 * * *",
   async () => {
     await scrapeZipRecruiter();
     await scrapeStreetEasyListings();
