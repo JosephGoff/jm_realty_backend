@@ -90,35 +90,38 @@ const scrapeZipRecruiter = async () => {
         link: absoluteLink,
       });
     });
-
     return jobs;
   }
 
+  const target = "https://www.ziprecruiter.com/co/J-%26-M-Realty-Services/Jobs";
+  const key = process.env.ZYTE_API_KEY;
   try {
-    const API_KEY = process.env.SCRAPER_API_KEY;
-    const TARGET_URL = encodeURIComponent(
-      "https://www.ziprecruiter.com/co/J-%26-M-Realty-Services/Jobs"
-    );
-    const SCRAPER_URL = `https://api.scraperapi.com/?api_key=${API_KEY}&url=${TARGET_URL}`;
-
-    fetch(SCRAPER_URL, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+    const resp = await axios.post(
+      "https://api.zyte.com/v1/extract",
+      {
+        url: target,
+        browserHtml: true,
       },
-    })
-      .then(async (res) => {
-        const text = await res.text();
-        const jobs = parseJobs(text);
-        console.log("FOUND JOBS:", jobs);
-        saveData(jobs, "jobs.json");
-      })
-      .catch((err) => {
-        sendErrorEmail("Zip Recruiter", err.message);
-        console.error("Scraping failed:", err.message);
-      });
+      {
+        auth: { username: key, password: "" },
+        timeout: 90000,
+      }
+    );
+
+    const html = resp.data.browserHtml;
+    const jobs = parseJobs(html);
+    console.log("JOBS: ", jobs);
+    if (Array.isArray(jobs)) {
+      saveData(jobs, "jobs.json");
+    }
   } catch (err) {
-    console.error("Scraping failed:", err.message);
+    await sendErrorEmail("Zip Recruiter", err.message);
+    console.error(
+      "Fetch failed:",
+      err.response?.status,
+      err.response?.data,
+      err.message
+    );
   }
 };
 
@@ -184,7 +187,7 @@ async function scrapeStreetEasyListings() {
         listings.push({
           imageUrl,
           price,
-          link: fullLink, 
+          link: fullLink,
           address,
           beds,
           baths,
@@ -245,7 +248,7 @@ async function scrapeStreetEasyListings() {
 }
 
 cron.schedule(
-  "19 13 * * *",
+  "50 16 * * *",
   async () => {
     await scrapeZipRecruiter();
     await scrapeStreetEasyListings();
